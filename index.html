@@ -8,9 +8,9 @@
         :root {
             --bg-color: #1e1e1e;
             --text-color: #ffffff;
-            --warning-bg-color: #ffaa00;
-            --negative-bg-color: #cc0000;
-            --timer-font-size: 10rem; /* Variable para el tamaño de letra */
+            --warning-bg-color: #ffff00; /* Amarillo */
+            --negative-bg-color: #ff0000; /* Rojo */
+            --timer-font-size: 30rem; /* Letra tamaño 30 por defecto */
         }
 
         * {
@@ -28,6 +28,7 @@
             align-items: center;
             justify-content: center;
             transition: background-color 0.3s ease, color 0.3s ease;
+            overflow: hidden; /* Evita scrollbars si la letra es muy grande */
         }
 
         .timer-display {
@@ -46,6 +47,8 @@
             margin-bottom: 20px;
             flex-wrap: wrap;
             justify-content: center;
+            position: relative;
+            z-index: 10;
         }
 
         button {
@@ -58,6 +61,7 @@
             color: var(--text-color);
             font-weight: bold;
             transition: background-color 0.2s;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5); /* Para que se lea bien en fondos claros */
         }
 
         button:hover {
@@ -69,13 +73,14 @@
             position: absolute;
             top: 20px;
             right: 20px;
+            z-index: 101;
         }
 
         .config-menu {
             position: absolute;
             top: 70px;
             right: 20px;
-            background-color: rgba(0, 0, 0, 0.8);
+            background-color: rgba(0, 0, 0, 0.9);
             color: white;
             padding: 20px;
             border-radius: 12px;
@@ -110,6 +115,11 @@
             border: none;
         }
 
+        .input-row {
+            display: flex;
+            gap: 10px;
+        }
+
         .config-group input[type="color"] {
             height: 40px;
             padding: 2px;
@@ -135,18 +145,26 @@
         </div>
 
         <div class="config-group">
-            <label>Tiempo inicial (Segundos):</label>
-            <input type="number" id="initialTimeInput" value="300" onchange="updateSettings()">
+            <label>Tiempo inicial:</label>
+            <div class="input-row">
+                <input type="number" id="initialMinInput" value="40" min="0" onchange="updateSettings()" placeholder="Min">
+                <input type="number" id="initialSecInput" value="0" min="0" max="59" onchange="updateSettings()" placeholder="Seg">
+            </div>
+            <small style="color: #aaa; font-size: 0.8rem;">Minutos / Segundos</small>
         </div>
 
         <div class="config-group">
-            <label>Límite de aviso (Segundos restantes/alcanzados):</label>
-            <input type="number" id="warningTimeInput" value="60" onchange="updateSettings()">
+            <label>Límite de aviso:</label>
+            <div class="input-row">
+                <input type="number" id="warningMinInput" value="1" min="0" onchange="updateSettings()" placeholder="Min">
+                <input type="number" id="warningSecInput" value="0" min="0" max="59" onchange="updateSettings()" placeholder="Seg">
+            </div>
+            <small style="color: #aaa; font-size: 0.8rem;">Minutos / Segundos</small>
         </div>
 
         <div class="config-group">
-            <label>Tamaño de letra (1 a 30):</label>
-            <input type="number" id="fontSizeInput" value="10" min="1" max="30" step="0.5" onchange="updateAppearance()">
+            <label>Tamaño de letra:</label>
+            <input type="number" id="fontSizeInput" value="30" min="1" max="100" step="0.5" onchange="updateAppearance()">
         </div>
 
         <div class="config-group">
@@ -161,17 +179,17 @@
 
         <div class="config-group">
             <label>Color de fondo (Aviso límite):</label>
-            <input type="color" id="warningColorInput" value="#ffaa00" onchange="updateSettings()">
+            <input type="color" id="warningColorInput" value="#ffff00" onchange="updateSettings()">
         </div>
 
         <div class="config-group" id="negativeColorGroup">
             <label>Color de fondo (Tiempo negativo):</label>
-            <input type="color" id="negativeColorInput" value="#cc0000" onchange="updateSettings()">
+            <input type="color" id="negativeColorInput" value="#ff0000" onchange="updateSettings()">
         </div>
     </div>
 
     <!-- Pantalla del Temporizador -->
-    <div class="timer-display" id="timeDisplay">05:00</div>
+    <div class="timer-display" id="timeDisplay">40:00</div>
 
     <!-- Controles Principales -->
     <div class="controls">
@@ -191,48 +209,49 @@
         let timerInterval;
         let isRunning = false;
         
-        // Estado interno en segundos
-        let currentTime = 300; 
+        let currentTime = 2400; // 40 minutos en segundos por defecto
         
-        // Variables desde la configuración
+        // Variables de configuración
         let mode = 'down';
-        let initialTime = 300;
-        let warningTime = 60;
-        let warningColor = '#ffaa00';
-        let negativeColor = '#cc0000';
+        let initialTime = 2400;
+        let warningTime = 60; // 1 minuto de aviso por defecto
+        let warningColor = '#ffff00'; // Amarillo
+        let negativeColor = '#ff0000'; // Rojo
         let normalBgColor = '#1e1e1e';
 
         const display = document.getElementById('timeDisplay');
         const startBtn = document.getElementById('startBtn');
 
-        // Mostrar/Ocultar el menú lateral
         function toggleConfig() {
             document.getElementById('configMenu').classList.toggle('active');
         }
 
-        // Actualiza los colores y el tamaño de letra en tiempo real
         function updateAppearance() {
             normalBgColor = document.getElementById('bgColorInput').value;
             
-            // Aplicar tamaño de fuente
             const fontSize = document.getElementById('fontSizeInput').value;
             document.documentElement.style.setProperty('--timer-font-size', fontSize + 'rem');
             
-            // Aplicar color de texto
             document.documentElement.style.setProperty('--text-color', document.getElementById('textColorInput').value);
             
             checkLimitsAndColors();
         }
 
-        // Lee todos los ajustes funcionales del formulario
         function updateSettings() {
             mode = document.getElementById('modeSelect').value;
-            initialTime = parseInt(document.getElementById('initialTimeInput').value) || 0;
-            warningTime = parseInt(document.getElementById('warningTimeInput').value) || 0;
+            
+            // Convertir minutos y segundos a segundos totales
+            const initMin = parseInt(document.getElementById('initialMinInput').value) || 0;
+            const initSec = parseInt(document.getElementById('initialSecInput').value) || 0;
+            initialTime = (initMin * 60) + initSec;
+
+            const warnMin = parseInt(document.getElementById('warningMinInput').value) || 0;
+            const warnSec = parseInt(document.getElementById('warningSecInput').value) || 0;
+            warningTime = (warnMin * 60) + warnSec;
+
             warningColor = document.getElementById('warningColorInput').value;
             negativeColor = document.getElementById('negativeColorInput').value;
             
-            // Ocultar opción de color negativo si estamos en cronómetro (hacia arriba)
             document.getElementById('negativeColorGroup').style.display = (mode === 'down') ? 'block' : 'none';
             
             if (!isRunning) {
@@ -241,7 +260,6 @@
             }
         }
 
-        // Pausar o iniciar
         function toggleTimer() {
             if (isRunning) {
                 clearInterval(timerInterval);
@@ -253,7 +271,6 @@
             isRunning = !isRunning;
         }
 
-        // Volver al valor inicial
         function resetTimer() {
             clearInterval(timerInterval);
             isRunning = false;
@@ -262,13 +279,11 @@
             updateDisplay();
         }
 
-        // Sumar o restar segundos manualmente
         function addTime(seconds) {
             currentTime += seconds;
             updateDisplay();
         }
 
-        // La función que se ejecuta cada 1 segundo
         function tick() {
             if (mode === 'down') {
                 currentTime--;
@@ -278,7 +293,6 @@
             updateDisplay();
         }
 
-        // Formatea los segundos a MM:SS o HH:MM:SS (incluyendo negativos)
         function formatTime(seconds) {
             const isNegative = seconds < 0;
             const absSeconds = Math.abs(seconds);
@@ -296,7 +310,6 @@
             return formatted;
         }
 
-        // Evalúa si se llegó a un límite de aviso o negativo para cambiar el fondo
         function checkLimitsAndColors() {
             let currentBg = normalBgColor;
 
