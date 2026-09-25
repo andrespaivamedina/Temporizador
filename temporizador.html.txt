@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temporizador Personalizable</title>
+    <style>
+        :root {
+            --bg-color: #1e1e1e;
+            --text-color: #ffffff;
+            --warning-bg-color: #ffaa00;
+            --negative-bg-color: #cc0000;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .timer-display {
+            font-size: 10rem;
+            font-variant-numeric: tabular-nums;
+            font-weight: bold;
+            margin-bottom: 2rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: var(--text-color);
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Menú de Configuración */
+        .config-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+
+        .config-menu {
+            position: absolute;
+            top: 70px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            width: 320px;
+            display: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            z-index: 100;
+        }
+
+        .config-menu.active {
+            display: block;
+        }
+
+        .config-group {
+            margin-bottom: 15px;
+        }
+
+        .config-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .config-group input[type="color"],
+        .config-group input[type="number"],
+        .config-group select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            border: none;
+        }
+
+        .config-group input[type="color"] {
+            height: 40px;
+            padding: 2px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Botón de Configuración -->
+    <button class="config-toggle" onclick="toggleConfig()">⚙️ Configuración</button>
+
+    <!-- Panel de Configuración -->
+    <div class="config-menu" id="configMenu">
+        <h3>Ajustes del Temporizador</h3>
+        
+        <div class="config-group">
+            <label>Modo de cuenta:</label>
+            <select id="modeSelect" onchange="updateSettings()">
+                <option value="down">Regresivo (Cuenta Atrás)</option>
+                <option value="up">Ascendente (Cronómetro)</option>
+            </select>
+        </div>
+
+        <div class="config-group">
+            <label>Tiempo inicial (Segundos):</label>
+            <input type="number" id="initialTimeInput" value="300" onchange="updateSettings()">
+        </div>
+
+        <div class="config-group">
+            <label>Límite de aviso (Segundos restantes/alcanzados):</label>
+            <input type="number" id="warningTimeInput" value="60" onchange="updateSettings()">
+        </div>
+
+        <div class="config-group">
+            <label>Color de fondo (Normal):</label>
+            <input type="color" id="bgColorInput" value="#1e1e1e" onchange="updateColors()">
+        </div>
+
+        <div class="config-group">
+            <label>Color de texto principal:</label>
+            <input type="color" id="textColorInput" value="#ffffff" onchange="updateColors()">
+        </div>
+
+        <div class="config-group">
+            <label>Color de fondo (Aviso límite):</label>
+            <input type="color" id="warningColorInput" value="#ffaa00" onchange="updateSettings()">
+        </div>
+
+        <div class="config-group" id="negativeColorGroup">
+            <label>Color de fondo (Tiempo negativo):</label>
+            <input type="color" id="negativeColorInput" value="#cc0000" onchange="updateSettings()">
+        </div>
+    </div>
+
+    <!-- Pantalla del Temporizador -->
+    <div class="timer-display" id="timeDisplay">05:00</div>
+
+    <!-- Controles Principales -->
+    <div class="controls">
+        <button onclick="toggleTimer()" id="startBtn">▶ Iniciar</button>
+        <button onclick="resetTimer()">⏹ Reiniciar</button>
+    </div>
+
+    <!-- Añadir Tiempos Rápidos -->
+    <div class="controls">
+        <button onclick="addTime(10)">+ 10s</button>
+        <button onclick="addTime(60)">+ 1 Min</button>
+        <button onclick="addTime(300)">+ 5 Min</button>
+        <button onclick="addTime(-60)">- 1 Min</button>
+    </div>
+
+    <script>
+        let timerInterval;
+        let isRunning = false;
+        
+        // Estado interno en segundos
+        let currentTime = 300; 
+        
+        // Variables desde la configuración
+        let mode = 'down'; // 'down' o 'up'
+        let initialTime = 300;
+        let warningTime = 60;
+        let warningColor = '#ffaa00';
+        let negativeColor = '#cc0000';
+        let normalBgColor = '#1e1e1e';
+
+        const display = document.getElementById('timeDisplay');
+        const startBtn = document.getElementById('startBtn');
+
+        // Mostrar/Ocultar el menú lateral
+        function toggleConfig() {
+            document.getElementById('configMenu').classList.toggle('active');
+        }
+
+        // Actualiza los colores básicos en tiempo real
+        function updateColors() {
+            normalBgColor = document.getElementById('bgColorInput').value;
+            document.documentElement.style.setProperty('--text-color', document.getElementById('textColorInput').value);
+            checkLimitsAndColors();
+        }
+
+        // Lee todos los ajustes del formulario
+        function updateSettings() {
+            mode = document.getElementById('modeSelect').value;
+            initialTime = parseInt(document.getElementById('initialTimeInput').value) || 0;
+            warningTime = parseInt(document.getElementById('warningTimeInput').value) || 0;
+            warningColor = document.getElementById('warningColorInput').value;
+            negativeColor = document.getElementById('negativeColorInput').value;
+            
+            // Ocultar opción de color negativo si estamos en cronómetro (hacia arriba)
+            document.getElementById('negativeColorGroup').style.display = (mode === 'down') ? 'block' : 'none';
+            
+            if (!isRunning) {
+                currentTime = mode === 'down' ? initialTime : 0;
+                updateDisplay();
+            }
+        }
+
+        // Pausar o iniciar
+        function toggleTimer() {
+            if (isRunning) {
+                clearInterval(timerInterval);
+                startBtn.innerHTML = "▶ Reanudar";
+            } else {
+                timerInterval = setInterval(tick, 1000);
+                startBtn.innerHTML = "⏸ Pausar";
+            }
+            isRunning = !isRunning;
+        }
+
+        // Volver al valor inicial
+        function resetTimer() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            startBtn.innerHTML = "▶ Iniciar";
+            currentTime = mode === 'down' ? initialTime : 0;
+            updateDisplay();
+        }
+
+        // Sumar o restar segundos manualmente
+        function addTime(seconds) {
+            currentTime += seconds;
+            updateDisplay();
+        }
+
+        // La función que se ejecuta cada 1 segundo
+        function tick() {
+            if (mode === 'down') {
+                currentTime--;
+            } else {
+                currentTime++;
+            }
+            updateDisplay();
+        }
+
+        // Formatea los segundos a MM:SS o HH:MM:SS (incluyendo negativos)
+        function formatTime(seconds) {
+            const isNegative = seconds < 0;
+            const absSeconds = Math.abs(seconds);
+            
+            const h = Math.floor(absSeconds / 3600);
+            const m = Math.floor((absSeconds % 3600) / 60);
+            const s = absSeconds % 60;
+
+            let formatted = '';
+            if (isNegative) formatted += '- ';
+            if (h > 0) formatted += String(h).padStart(2, '0') + ':';
+            formatted += String(m).padStart(2, '0') + ':';
+            formatted += String(s).padStart(2, '0');
+            
+            return formatted;
+        }
+
+        // Evalúa si se llegó a un límite de aviso o negativo para cambiar el fondo
+        function checkLimitsAndColors() {
+            let currentBg = normalBgColor;
+
+            if (mode === 'down') {
+                if (currentTime < 0) {
+                    currentBg = negativeColor; // Pasó a negativo
+                } else if (currentTime <= warningTime) {
+                    currentBg = warningColor;  // Entró en zona de aviso
+                }
+            } else {
+                if (warningTime > 0 && currentTime >= warningTime) {
+                    currentBg = warningColor;  // En modo ascendente alcanzó la alerta
+                }
+            }
+
+            document.documentElement.style.setProperty('--bg-color', currentBg);
+        }
+
+        function updateDisplay() {
+            display.innerText = formatTime(currentTime);
+            checkLimitsAndColors();
+        }
+
+        // Inicialización
+        updateSettings();
+        updateColors();
+    </script>
+</body>
+</html>
