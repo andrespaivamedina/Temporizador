@@ -10,6 +10,7 @@
             --text-color: #ffffff;
             --warning-bg-color: #ffaa00;
             --negative-bg-color: #cc0000;
+            --timer-font-size: 10rem; /* Variable para el tamaño de letra */
         }
 
         * {
@@ -30,11 +31,13 @@
         }
 
         .timer-display {
-            font-size: 10rem;
+            font-size: var(--timer-font-size);
             font-variant-numeric: tabular-nums;
             font-weight: bold;
             margin-bottom: 2rem;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            text-align: center;
+            line-height: 1;
         }
 
         .controls {
@@ -77,6 +80,8 @@
             padding: 20px;
             border-radius: 12px;
             width: 320px;
+            max-height: 80vh;
+            overflow-y: auto;
             display: none;
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
             z-index: 100;
@@ -140,13 +145,18 @@
         </div>
 
         <div class="config-group">
+            <label>Tamaño de letra (1 a 30):</label>
+            <input type="number" id="fontSizeInput" value="10" min="1" max="30" step="0.5" onchange="updateAppearance()">
+        </div>
+
+        <div class="config-group">
             <label>Color de fondo (Normal):</label>
-            <input type="color" id="bgColorInput" value="#1e1e1e" onchange="updateColors()">
+            <input type="color" id="bgColorInput" value="#1e1e1e" onchange="updateAppearance()">
         </div>
 
         <div class="config-group">
             <label>Color de texto principal:</label>
-            <input type="color" id="textColorInput" value="#ffffff" onchange="updateColors()">
+            <input type="color" id="textColorInput" value="#ffffff" onchange="updateAppearance()">
         </div>
 
         <div class="config-group">
@@ -185,7 +195,7 @@
         let currentTime = 300; 
         
         // Variables desde la configuración
-        let mode = 'down'; // 'down' o 'up'
+        let mode = 'down';
         let initialTime = 300;
         let warningTime = 60;
         let warningColor = '#ffaa00';
@@ -200,14 +210,21 @@
             document.getElementById('configMenu').classList.toggle('active');
         }
 
-        // Actualiza los colores básicos en tiempo real
-        function updateColors() {
+        // Actualiza los colores y el tamaño de letra en tiempo real
+        function updateAppearance() {
             normalBgColor = document.getElementById('bgColorInput').value;
+            
+            // Aplicar tamaño de fuente
+            const fontSize = document.getElementById('fontSizeInput').value;
+            document.documentElement.style.setProperty('--timer-font-size', fontSize + 'rem');
+            
+            // Aplicar color de texto
             document.documentElement.style.setProperty('--text-color', document.getElementById('textColorInput').value);
+            
             checkLimitsAndColors();
         }
 
-        // Lee todos los ajustes del formulario
+        // Lee todos los ajustes funcionales del formulario
         function updateSettings() {
             mode = document.getElementById('modeSelect').value;
             initialTime = parseInt(document.getElementById('initialTimeInput').value) || 0;
@@ -285,13 +302,13 @@
 
             if (mode === 'down') {
                 if (currentTime < 0) {
-                    currentBg = negativeColor; // Pasó a negativo
+                    currentBg = negativeColor; 
                 } else if (currentTime <= warningTime) {
-                    currentBg = warningColor;  // Entró en zona de aviso
+                    currentBg = warningColor;  
                 }
             } else {
                 if (warningTime > 0 && currentTime >= warningTime) {
-                    currentBg = warningColor;  // En modo ascendente alcanzó la alerta
+                    currentBg = warningColor;  
                 }
             }
 
@@ -305,7 +322,7 @@
 
         // Inicialización
         updateSettings();
-        updateColors();
+        updateAppearance();
     </script>
 </body>
 </html>
