@@ -8,9 +8,9 @@
         :root {
             --bg-color: #1e1e1e;
             --text-color: #ffffff;
-            --warning-bg-color: #ffff00; /* Amarillo */
-            --negative-bg-color: #ff0000; /* Rojo */
-            --timer-font-size: 30rem; /* Letra default */
+            --warning-bg-color: #ffff00;
+            --negative-bg-color: #ff0000;
+            --font-scale: 50; /* Escala de 0 a 100 */
         }
 
         * {
@@ -28,13 +28,15 @@
             align-items: center;
             justify-content: center;
             transition: background-color 0.3s ease, color 0.3s ease;
-            overflow: hidden; /* Evita barras de desplazamiento innecesarias */
+            overflow: hidden; 
         }
 
         .timer-display {
-            /* La función min() elige el valor más pequeño: el tamaño configurado o el 18% del ancho de la pantalla (18vw). 
-               Esto asegura que, sin importar cuán grande sea el número configurado, jamás se saldrá de la pantalla en un celular. */
-            font-size: min(var(--timer-font-size), 18vw); 
+            /* 
+               Escala 50 = máximo 18vw (el tamaño de la versión anterior).
+               Escala 100 = máximo 36vw (exactamente el doble).
+            */
+            font-size: min(calc(var(--font-scale) * 0.6rem), calc(var(--font-scale) * 0.36vw)); 
             font-variant-numeric: tabular-nums;
             font-weight: bold;
             margin-bottom: 2rem;
@@ -42,7 +44,7 @@
             text-align: center;
             line-height: 1;
             width: 100%;
-            white-space: nowrap; /* Evita que los números bajen a otra línea */
+            white-space: nowrap; 
             padding: 0 10px;
         }
 
@@ -69,7 +71,6 @@
             font-weight: bold;
             transition: background-color 0.2s, transform 0.1s;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-            /* Mejora para botones táctiles */
             touch-action: manipulation;
         }
 
@@ -128,6 +129,11 @@
             border: none;
         }
 
+        .config-group input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+
         .input-row {
             display: flex;
             gap: 10px;
@@ -139,11 +145,10 @@
             cursor: pointer;
         }
 
-        /* Ajustes específicos para teléfonos móviles */
+        /* Ajustes para móviles */
         @media (max-width: 600px) {
             .config-menu {
                 width: 90%;
-                /* Centrar el menú en móviles */
                 left: 50%;
                 right: auto;
                 transform: translateX(-50%);
@@ -157,12 +162,15 @@
             button {
                 padding: 10px 16px;
                 font-size: 1rem;
-                flex: 1 1 auto; /* Permite que los botones se adapten al espacio sobrante */
+                flex: 1 1 auto; 
             }
 
-            /* Si el número pasa a ser negativo con horas (- 01:40:00), reducimos más el tamaño para que quepa */
             .timer-display {
-                font-size: min(var(--timer-font-size), 12vw); 
+                /* 
+                   En móvil, escala 50 = máximo 12vw. 
+                   Escala 100 = máximo 24vw (exactamente el doble).
+                */
+                font-size: min(calc(var(--font-scale) * 0.6rem), calc(var(--font-scale) * 0.24vw)); 
             }
         }
     </style>
@@ -203,8 +211,8 @@
         </div>
 
         <div class="config-group">
-            <label>Tamaño de letra base:</label>
-            <input type="number" id="fontSizeInput" value="30" min="1" max="100" step="0.5" onchange="updateAppearance()">
+            <label>Tamaño de letra: <span id="fontScaleValue">50</span>%</label>
+            <input type="range" id="fontSizeInput" value="50" min="0" max="100" oninput="updateAppearance()">
         </div>
 
         <div class="config-group">
@@ -249,17 +257,18 @@
         let timerInterval;
         let isRunning = false;
         
-        let currentTime = 2400; // 40 minutos
+        let currentTime = 2400; 
         
         let mode = 'down';
         let initialTime = 2400;
-        let warningTime = 60; // 1 minuto
+        let warningTime = 60; 
         let warningColor = '#ffff00';
         let negativeColor = '#ff0000';
         let normalBgColor = '#1e1e1e';
 
         const display = document.getElementById('timeDisplay');
         const startBtn = document.getElementById('startBtn');
+        const fontScaleValueLabel = document.getElementById('fontScaleValue');
 
         function toggleConfig() {
             document.getElementById('configMenu').classList.toggle('active');
@@ -268,8 +277,10 @@
         function updateAppearance() {
             normalBgColor = document.getElementById('bgColorInput').value;
             
-            const fontSize = document.getElementById('fontSizeInput').value;
-            document.documentElement.style.setProperty('--timer-font-size', fontSize + 'rem');
+            // Actualizar la variable CSS de escala
+            const fontScale = document.getElementById('fontSizeInput').value;
+            fontScaleValueLabel.innerText = fontScale;
+            document.documentElement.style.setProperty('--font-scale', fontScale);
             
             document.documentElement.style.setProperty('--text-color', document.getElementById('textColorInput').value);
             
