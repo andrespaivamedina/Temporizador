@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Temporizador Personalizable</title>
+    <title>Temporizador Adaptable</title>
     <style>
         :root {
             --bg-color: #1e1e1e;
             --text-color: #ffffff;
             --warning-bg-color: #ffff00; /* Amarillo */
             --negative-bg-color: #ff0000; /* Rojo */
-            --timer-font-size: 30rem; /* Letra tamaño 30 por defecto */
+            --timer-font-size: 30rem; /* Letra default */
         }
 
         * {
@@ -28,17 +28,22 @@
             align-items: center;
             justify-content: center;
             transition: background-color 0.3s ease, color 0.3s ease;
-            overflow: hidden; /* Evita scrollbars si la letra es muy grande */
+            overflow: hidden; /* Evita barras de desplazamiento innecesarias */
         }
 
         .timer-display {
-            font-size: var(--timer-font-size);
+            /* La función min() elige el valor más pequeño: el tamaño configurado o el 18% del ancho de la pantalla (18vw). 
+               Esto asegura que, sin importar cuán grande sea el número configurado, jamás se saldrá de la pantalla en un celular. */
+            font-size: min(var(--timer-font-size), 18vw); 
             font-variant-numeric: tabular-nums;
             font-weight: bold;
             margin-bottom: 2rem;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
             text-align: center;
             line-height: 1;
+            width: 100%;
+            white-space: nowrap; /* Evita que los números bajen a otra línea */
+            padding: 0 10px;
         }
 
         .controls {
@@ -49,6 +54,8 @@
             justify-content: center;
             position: relative;
             z-index: 10;
+            width: 100%;
+            padding: 0 15px;
         }
 
         button {
@@ -60,12 +67,18 @@
             background-color: rgba(255, 255, 255, 0.2);
             color: var(--text-color);
             font-weight: bold;
-            transition: background-color 0.2s;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.5); /* Para que se lea bien en fondos claros */
+            transition: background-color 0.2s, transform 0.1s;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            /* Mejora para botones táctiles */
+            touch-action: manipulation;
         }
 
         button:hover {
             background-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        button:active {
+            transform: scale(0.95);
         }
 
         /* Menú de Configuración */
@@ -125,6 +138,33 @@
             padding: 2px;
             cursor: pointer;
         }
+
+        /* Ajustes específicos para teléfonos móviles */
+        @media (max-width: 600px) {
+            .config-menu {
+                width: 90%;
+                /* Centrar el menú en móviles */
+                left: 50%;
+                right: auto;
+                transform: translateX(-50%);
+                top: 80px; 
+            }
+
+            .controls {
+                gap: 10px;
+            }
+
+            button {
+                padding: 10px 16px;
+                font-size: 1rem;
+                flex: 1 1 auto; /* Permite que los botones se adapten al espacio sobrante */
+            }
+
+            /* Si el número pasa a ser negativo con horas (- 01:40:00), reducimos más el tamaño para que quepa */
+            .timer-display {
+                font-size: min(var(--timer-font-size), 12vw); 
+            }
+        }
     </style>
 </head>
 <body>
@@ -163,7 +203,7 @@
         </div>
 
         <div class="config-group">
-            <label>Tamaño de letra:</label>
+            <label>Tamaño de letra base:</label>
             <input type="number" id="fontSizeInput" value="30" min="1" max="100" step="0.5" onchange="updateAppearance()">
         </div>
 
@@ -209,14 +249,13 @@
         let timerInterval;
         let isRunning = false;
         
-        let currentTime = 2400; // 40 minutos en segundos por defecto
+        let currentTime = 2400; // 40 minutos
         
-        // Variables de configuración
         let mode = 'down';
         let initialTime = 2400;
-        let warningTime = 60; // 1 minuto de aviso por defecto
-        let warningColor = '#ffff00'; // Amarillo
-        let negativeColor = '#ff0000'; // Rojo
+        let warningTime = 60; // 1 minuto
+        let warningColor = '#ffff00';
+        let negativeColor = '#ff0000';
         let normalBgColor = '#1e1e1e';
 
         const display = document.getElementById('timeDisplay');
@@ -240,7 +279,6 @@
         function updateSettings() {
             mode = document.getElementById('modeSelect').value;
             
-            // Convertir minutos y segundos a segundos totales
             const initMin = parseInt(document.getElementById('initialMinInput').value) || 0;
             const initSec = parseInt(document.getElementById('initialSecInput').value) || 0;
             initialTime = (initMin * 60) + initSec;
